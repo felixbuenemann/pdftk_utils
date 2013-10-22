@@ -5,7 +5,6 @@ module PdftkUtils
   class PdftkRunner
     def initialize(pdftk_binary = PdftkUtils.pdftk_binary)
       @pdftk = pdftk_binary
-      @common_args = common_args
     end
 
     def run(args)
@@ -25,7 +24,7 @@ module PdftkUtils
     private
 
     def build_pdftk_command(args)
-      cmd = "#{@pdftk.shellescape} #{@common_args} #{args} 2>&1"
+      cmd = "#{@pdftk.shellescape} #{args} 2>&1"
     end
   end
 end
