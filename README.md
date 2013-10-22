@@ -1,6 +1,6 @@
 # PdftkUtils
 
-This gem provides some simple pdf utilities based on PDFtk and was ported from [gs\_pdf\_utils](https://github.com/fbuenemann/gs_pdf_utils).
+This gem provides some simple pdf utilities based on PDFtk and was ported from [gs\_pdf\_utils](https://github.com/felixbuenemann/gs_pdf_utils).
 
 Currently it provides methods for detecting pdf files by magic, counting pdf pages
 and extracting a single, all or a range of pages from a pdf.
@@ -13,7 +13,7 @@ It's still in alpha state and has no spec coverage, still it might suite your ne
 
 Add this line to your application's Gemfile:
 
-    gem 'pdftk_utils', :git => "https://github.com/fbuenemann/pdftk_utils"
+    gem 'pdftk_utils', :git => "https://github.com/felixbuenemann/pdftk_utils"
 
 And then execute:
 
