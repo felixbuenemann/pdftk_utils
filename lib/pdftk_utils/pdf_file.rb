@@ -1,9 +1,9 @@
 # encoding: utf-8
-require 'shellwords'
 
 module PdftkUtils
   class PdfFile
-    def initialize(pdf_file, pdftk_runner = PdftkRunner.new)
+    def initialize(pdf_file)
+      pdftk_runner ||= ShellRunner.new(PdftkUtils.pdftk_binary)
       unless PdftkUtils.is_pdf? pdf_file
         raise BadFileType, "#{pdf_file} does not appear to be a PDF", caller
       end
@@ -25,7 +25,7 @@ module PdftkUtils
       if page_from < 1 || page_from > page_to || page_to > pages
         raise OutOfBounds, "page range #{page_range} is out of bounds (1..#{pages})", caller
       end
-      @pdftk_runner.run "#{@file.shellescape} cat #{page_from}-#{page_to} output #{targetfile.shellescape}"
+      @pdftk_runner.run %W(#@file cat #{page_from}-#{page_to} output #{targetfile})
       if File.size(targetfile) == 0
         raise ProcessingError, "extracted page is 0 bytes", caller
       end
@@ -34,7 +34,7 @@ module PdftkUtils
 
     # targetfile_template = "test-%d.pdf"
     def extract_pages(targetfile_template)
-      @pdftk_runner.run "#{@file.shellescape} burst output #{targetfile_template.shellescape}"
+      @pdftk_runner.run %W(#@file burst output #{targetfile_template})
       File.delete("doc_data.txt") if File.exists? "doc_data.txt"
       targetfiles = (1..pages).map {|page| sprintf(targetfile_template, page)}
     end
@@ -45,14 +45,14 @@ module PdftkUtils
           raise BadFileType, "#{pdf_file} does not appear to be a PDF", caller
         end
       end
-      @pdftk_runner.run "#{@file.shellescape} #{pdf_files.map(&:shellescape).join ' '} cat output #{targetfile.shellescape}"
+      @pdftk_runner.run [@file, *pdf_files] + %W(cat output #{targetfile})
       targetfile
     end
 
     private
 
     def count_pages
-      output = @pdftk_runner.run_with_output "#{@file.shellescape} dump_data"
+      output = @pdftk_runner.run_with_output %W(#@file dump_data)
       num_pages = output.match(/^NumberOfPages: (\d+)$/)[1].to_i
       if num_pages == 0
         raise ProcessingError, "could not determine number of pages", caller

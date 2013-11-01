@@ -22,6 +22,6 @@ module PdftkUtils
     end
   end
 
-  autoload :PdftkRunner, 'pdftk_utils/pdftk_runner'
+  autoload :ShellRunner, 'pdftk_utils/shell_runner'
   autoload :PdfFile,     'pdftk_utils/pdf_file'
 end

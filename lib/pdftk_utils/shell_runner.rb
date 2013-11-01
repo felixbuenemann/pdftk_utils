@@ -2,9 +2,9 @@
 require 'shellwords'
 
 module PdftkUtils
-  class PdftkRunner
-    def initialize(pdftk_binary = PdftkUtils.pdftk_binary)
-      @pdftk = pdftk_binary
+  class ShellRunner
+    def initialize(binary)
+      @binary = binary
     end
 
     def run(args)
@@ -13,7 +13,7 @@ module PdftkUtils
     end
 
     def run_with_output(args)
-      cmd = build_pdftk_command(args)
+      cmd = build_command(args)
       output = `#{cmd}`
       if $?.to_i > 0
         raise CommandFailed, "command #{cmd} failed with output: #{output}", caller
@@ -23,8 +23,8 @@ module PdftkUtils
 
     private
 
-    def build_pdftk_command(args)
-      cmd = "#{@pdftk.shellescape} #{args} 2>&1"
+    def build_command(args)
+      cmd = "#{@binary.shellescape} #{args.shelljoin} 2>&1"
     end
   end
 end
