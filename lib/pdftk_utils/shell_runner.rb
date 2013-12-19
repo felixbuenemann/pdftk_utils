@@ -15,7 +15,7 @@ module PdftkUtils
     def run_with_output(args)
       cmd = build_command(args)
       output = `#{cmd}`
-      if $?.to_i > 0
+      if $?.exitstatus > 0
         raise CommandFailed, "command #{cmd} failed with output: #{output}", caller
       end
       output

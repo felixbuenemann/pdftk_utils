@@ -6,11 +6,17 @@ module PdftkUtils
   class CommandFailed < PdftkUtilsError; end
   class ProcessingError < PdftkUtilsError; end
   class OutOfBounds < PdftkUtilsError; end
+  class InvalidPassword < PdftkUtilsError; end
 
   class << self
     attr_writer :pdftk_binary
     def pdftk_binary
       @pdftk_binary ||= "pdftk"
+    end
+
+    attr_writer :qpdf_binary
+    def qpdf_binary
+      @qpdf_binary ||= "qpdf"
     end
 
     def is_pdf?(file)

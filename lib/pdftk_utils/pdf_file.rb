@@ -2,13 +2,30 @@
 
 module PdftkUtils
   class PdfFile
-    def initialize(pdf_file)
-      pdftk_runner ||= ShellRunner.new(PdftkUtils.pdftk_binary)
-      unless PdftkUtils.is_pdf? pdf_file
-        raise BadFileType, "#{pdf_file} does not appear to be a PDF", caller
-      end
+    def initialize(pdf_file, options = {})
+      validate pdf_file
+
+      @temp_files = []
       @file = pdf_file
-      @pdftk_runner = pdftk_runner
+      @pdftk_runner = options[:pdftk_runner] || ShellRunner.new(PdftkUtils.pdftk_binary)
+      @qpdf_runner  = options[:qpdf_runner]  || ShellRunner.new(PdftkUtils.qpdf_binary)
+      @password = options[:password]
+    end
+
+    def file
+      if is_encrypted?
+        @decrypted_file ||= decrypt @file, @password
+      else
+        @file
+      end
+    end
+
+    def is_encrypted?
+      if @is_encrypted.nil?
+        @is_encrypted = check_encryption @file
+      else
+        @is_encrypted
+      end
     end
 
     def pages
@@ -25,7 +42,7 @@ module PdftkUtils
       if page_from < 1 || page_from > page_to || page_to > pages
         raise OutOfBounds, "page range #{page_range} is out of bounds (1..#{pages})", caller
       end
-      @pdftk_runner.run %W(#@file cat #{page_from}-#{page_to} output #{targetfile})
+      @pdftk_runner.run %W(#{file} cat #{page_from}-#{page_to} output #{targetfile})
       if File.size(targetfile) == 0
         raise ProcessingError, "extracted page is 0 bytes", caller
       end
@@ -34,25 +51,64 @@ module PdftkUtils
 
     # targetfile_template = "test-%d.pdf"
     def extract_pages(targetfile_template)
-      @pdftk_runner.run %W(#@file burst output #{targetfile_template})
+      @pdftk_runner.run %W(#{file} burst output #{targetfile_template})
       File.delete("doc_data.txt") if File.exists? "doc_data.txt"
       targetfiles = (1..pages).map {|page| sprintf(targetfile_template, page)}
     end
 
     def append_files(*pdf_files, targetfile)
-      pdf_files.each do |pdf_file|
-        unless PdftkUtils.is_pdf? pdf_file
-          raise BadFileType, "#{pdf_file} does not appear to be a PDF", caller
+      pdf_files.map! do |pdf_file, password|
+        validate pdf_file
+        if check_encryption pdf_file
+          decrypt pdf_file, password
+        else
+          pdf_file
         end
       end
-      @pdftk_runner.run [@file, *pdf_files] + %W(cat output #{targetfile})
+      @pdftk_runner.run [file, *pdf_files] + %W(cat output #{targetfile})
       targetfile
+    end
+
+    def cleanup!
+      @temp_files.each do |temp_file|
+        next if temp_file.nil?
+        temp_file.close!
+      end
+      @temp_files = []
+      @decrypted_file = nil
     end
 
     private
 
+    def check_encryption(pdf_file)
+      IO.binread(pdf_file, 4096).index("/Encrypt") != nil
+    end
+
+    def validate(pdf_file)
+      raise Errno::ENOENT unless File.exists? pdf_file
+      unless PdftkUtils.is_pdf? pdf_file
+        raise BadFileType, "#{pdf_file} does not appear to be a PDF", caller
+      end
+    end
+
+    def decrypt(pdf_file, password = nil)
+      temp_file = Tempfile.new ["pdftk_utils_decrypt", ".pdf"]
+      temp_file.close
+      @temp_files << temp_file
+      begin
+        @qpdf_runner.run %W(--decrypt --password=#{password} #{pdf_file} #{temp_file.path})
+      rescue CommandFailed
+        if $?.exitstatus == 2
+          raise InvalidPassword, "failed to decrypt #{pdf_file}, invalid/missing password?", caller
+        else
+          raise
+        end
+      end
+      temp_file.path
+    end
+
     def count_pages
-      output = @pdftk_runner.run_with_output %W(#@file dump_data)
+      output = @pdftk_runner.run_with_output %W(#{file} dump_data)
       num_pages = output.match(/^NumberOfPages: (\d+)$/)[1].to_i
       if num_pages == 0
         raise ProcessingError, "could not determine number of pages", caller

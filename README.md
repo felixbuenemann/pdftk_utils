@@ -2,6 +2,8 @@
 
 This gem provides some simple pdf utilities based on PDFtk and was ported from [gs\_pdf\_utils](https://github.com/felixbuenemann/gs_pdf_utils).
 
+It also can use qpdf if available to decrypt protected pdfs.
+
 Currently it provides methods for detecting pdf files by magic, counting pdf pages
 and extracting a single, all or a range of pages from a pdf.
 
@@ -37,14 +39,19 @@ pdf.extract_page_range(2..5, "page2-5.pdf")
 pdf.append_files "test2.pdf", "test3.pdf", "merged.pdf"
 # check if file is a pdf, by checking magic bytes
 PdftkUtils.is_pdf? "test.pdf"
+# open pdf protected with user password
+pdf = PdftkUtils::PdfFile.new "test.pdf", password: "foobar"
+# append (some) protected files
+pdf.append_files "test2.pdf", ["test3.pdf", "test3pwd"], "merged.pdf"
 ```
 
 ## Configuration
 
-If pdftk is not in your path, you can configure it:
+If pdftk or qpdf is not in your path, you can configure it:
 ```ruby
 PdftkUtils.config do |c|
   c.pdftk_binary = "/path/to/pdftk"
+  c.qpdf_binary  = "/path/to/qpdf"
 end
 ```
 
