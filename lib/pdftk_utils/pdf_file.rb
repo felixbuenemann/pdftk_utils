@@ -81,7 +81,15 @@ module PdftkUtils
     private
 
     def check_encryption(pdf_file)
-      IO.binread(pdf_file, 4096).index("/Encrypt") != nil
+        head, foot = 0, [File.size(pdf_file) - 4096, 0].max
+        check_for_encrypt(pdf_file, head, foot)
+    end
+
+    def check_for_encrypt(pdf_file, *offsets)
+      offsets.each do |offset|
+        return true if IO.binread(pdf_file, 4096, offset).index("/Encrypt") != nil
+      end
+      false
     end
 
     def validate(pdf_file)
